@@ -4,7 +4,7 @@ sealed class BleDeviceConnectState extends Equatable {
   const BleDeviceConnectState();
 
   @override
-  List<Object> get props => [];
+  List<Object?> get props => [];
 }
 
 final class BleDeviceConnectInitial extends BleDeviceConnectState {}
@@ -15,7 +15,7 @@ final class BleDeviceConnecting extends BleDeviceConnectState {
   final String remoteId;
 
   @override
-  List<Object> get props => [remoteId];
+  List<Object?> get props => [remoteId];
 }
 
 final class BleDeviceConnectError extends BleDeviceConnectState {
@@ -25,7 +25,7 @@ final class BleDeviceConnectError extends BleDeviceConnectState {
   final String error;
 
   @override
-  List<Object> get props => [remoteId, error];
+  List<Object?> get props => [remoteId, error];
 }
 
 final class BleDeviceConnected extends BleDeviceConnectState {
@@ -34,7 +34,7 @@ final class BleDeviceConnected extends BleDeviceConnectState {
   final String remoteId;
 
   @override
-  List<Object> get props => [remoteId];
+  List<Object?> get props => [remoteId];
 }
 
 final class BleDeviceReceivedData extends BleDeviceConnectState {
@@ -44,7 +44,7 @@ final class BleDeviceReceivedData extends BleDeviceConnectState {
   final SmartHomeDataModel? model;
 
   @override
-  List<Object> get props => [remoteId, model.toString()];
+  List<Object?> get props => [remoteId, model];
 }
 
 final class BleDeviceDisconnected extends BleDeviceConnectState {}

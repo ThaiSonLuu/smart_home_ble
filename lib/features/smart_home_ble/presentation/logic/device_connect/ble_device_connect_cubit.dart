@@ -12,7 +12,7 @@ class BleDeviceConnectCubit extends Cubit<BleDeviceConnectState> {
 
   String remoteId = "";
   StreamSubscription<BluetoothConnectionState>? subscription;
-  List<BluetoothCharacteristic> canWriteCharacters = [];
+  BluetoothCharacteristic? canWriteCharacters;
 
   Future<void> connectDevice(BluetoothDevice device) async {
     await subscription?.cancel();
@@ -24,6 +24,7 @@ class BleDeviceConnectCubit extends Cubit<BleDeviceConnectState> {
       subscription = device.connectionState.listen((event) async {
         if (event == BluetoothConnectionState.disconnected) {
           remoteId = "";
+          canWriteCharacters = null;
           await subscription?.cancel();
           emit(BleDeviceDisconnected());
         }
@@ -39,39 +40,25 @@ class BleDeviceConnectCubit extends Cubit<BleDeviceConnectState> {
 
   void discoverService(BluetoothDevice device) async {
     final discoverServices = await device.discoverServices();
-    canWriteCharacters.clear();
+    canWriteCharacters = null;
     for (var discoverService in discoverServices) {
       for (var characteristic in discoverService.characteristics) {
         if (characteristic.properties.write) {
-          canWriteCharacters.add(characteristic);
+          canWriteCharacters = characteristic;
         }
-        if (characteristic.properties.notify) {
+        if (characteristic.properties.notify ||
+            characteristic.properties.indicate) {
           try {
-            characteristic.setNotifyValue(true);
             final subscription = characteristic.onValueReceived.listen((event) {
               final model =
                   _convertRawStringToModel(String.fromCharCodes(event));
               if (model != null) {
-                emit(BleDeviceReceivedData("$remoteId.", model));
+                emit(BleDeviceReceivedData(remoteId, model));
               }
             });
             device.cancelWhenDisconnected(subscription);
+            await characteristic.setNotifyValue(true);
           } catch (_) {}
-        }
-        if (characteristic.properties.read) {
-          Timer.periodic(const Duration(seconds: 1), (timer) async {
-            try {
-              final result = await characteristic.read();
-              final model =
-                  _convertRawStringToModel(String.fromCharCodes(result));
-              if (model != null) {
-                emit(BleDeviceReceivedData(remoteId, model));
-              }
-            } catch (_) {}
-            if (device.isDisconnected) {
-              timer.cancel();
-            }
-          });
         }
       }
     }
@@ -120,12 +107,9 @@ class BleDeviceConnectCubit extends Cubit<BleDeviceConnectState> {
     return model;
   }
 
-  void write(String cmd) {
-    print("Ble Write: $cmd");
-    for (var element in canWriteCharacters) {
-      try {
-        element.write(cmd.codeUnits);
-      } catch (_) {}
-    }
+  void write(String cmd) async {
+    try {
+      await canWriteCharacters?.write(cmd.codeUnits);
+    } catch (_) {}
   }
 }
